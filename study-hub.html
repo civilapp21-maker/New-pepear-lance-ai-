@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Study Hub | Peparlance AI</title>
+<meta name="description" content="Add your MSBTE subject codes once. Peparlance fetches papers and syllabus, then builds a day-by-day timetable for all subjects."/>
+<meta name="theme-color" content="#0F1117"/>
+<link rel="canonical" href="https://peparlanceai.online/study-hub.html"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0F1117;--surface:#1A1D27;--raised:#232631;--line:rgba(255,255,255,.1);--text:#e2e2eb;--muted:#94A3B8;--blue:#00D4FF;--green:#00D4AA;--violet:#7C3AED;--warn:#FBBF24;--err:#F87171}
+*{box-sizing:border-box}
+html{scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55}
+h1,h2,h3{font-family:"Plus Jakarta Sans",Inter,sans-serif;margin:0}
+a{color:var(--blue);text-decoration:none}
+nav{position:fixed;top:0;left:0;right:0;z-index:10;background:rgba(30,31,38,.8);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav div{max-width:760px;margin:0 auto;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+nav b{font-family:"Plus Jakarta Sans";font-size:18px;color:var(--blue)}
+main{max-width:760px;margin:0 auto;padding:88px 18px 60px}
+h1{font-size:30px;line-height:1.15}
+.lead{color:var(--muted);margin:8px 0 0}
+section{margin-top:32px}
+h2{font-size:19px;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input,select{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:11px 13px;font:inherit;min-width:0}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+input[type=date]{color-scheme:dark}
+.grow{flex:1}
+.btn{background:var(--blue);color:#001018;border:0;border-radius:10px;padding:11px 18px;font:inherit;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.hint{color:var(--muted);font-size:13px;margin:8px 0 0;min-height:18px}
+.hint.err{color:var(--err)}.hint.warn{color:var(--warn)}
+.subj{margin-top:12px}
+.subj-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.subj-name{font-weight:600}
+.code{color:var(--muted);font-size:13px}
+.tag{font-size:12px;padding:2px 8px;border-radius:99px;background:rgba(0,212,170,.14);color:var(--green)}
+.tag.load{background:rgba(0,212,255,.12);color:var(--blue)}
+.tag.bad{background:rgba(248,113,113,.14);color:var(--err)}
+.subj-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted)}
+.subj-foot input{padding:6px 9px;font-size:13px}
+details{margin-top:10px;font-size:13px;color:var(--muted)}
+summary{cursor:pointer}
+.units{margin:8px 0 0;padding:0;list-style:none}
+.units li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line)}
+.w{color:var(--blue);white-space:nowrap}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:transparent;color:var(--text);border-radius:99px;padding:8px 14px;font:inherit;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--blue);color:#001018;border-color:var(--blue);font-weight:600}
+label.f{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.bar{height:8px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;margin:10px 0 4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--green));width:0}
+.day{margin-top:12px}
+.day.today{border-color:var(--blue)}
+.day.past{opacity:.75}
+.day-head{display:flex;justify-content:space-between;gap:10px;font-weight:600;margin-bottom:6px}
+.day-head span{color:var(--muted);font-weight:400;font-size:13px}
+.item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)}
+.item input{width:18px;height:18px;margin-top:3px;accent-color:var(--blue);flex-shrink:0;padding:0}
+.item.done .t{text-decoration:line-through;opacity:.55}
+.t{flex:1;min-width:0}
+.t small{display:block;color:var(--muted)}
+.rev{color:var(--violet);font-weight:600}
+.missed{color:var(--warn);font-size:12px}
+.empty{color:var(--muted);text-align:center;padding:22px 10px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+@media (max-width:520px){h1{font-size:25px}}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .3s}}
+</style>
+</head>
+<body>
+<nav><div><b>Peparlance AI</b><span><a href="app.html">Dashboard</a> &nbsp;·&nbsp; <a href="study-plan.html">Study Plan</a> &nbsp; <button class="btn ghost sm" id="out" hidden>Sign out</button></span></div></nav>
+<main>
+<h1>Study Hub</h1>
+<p class="lead">Add each subject code once. We fetch its papers and syllabus, then build one timetable that covers every subject until your exams.</p>
+
+<div class="card" id="gate" style="margin-top:28px" hidden>
+<h2>Sign in to use Study Hub</h2>
+<p class="lead" style="margin:0 0 14px">Your subjects and timetable are saved to your account, so they follow you to any device.</p>
+<button class="btn" id="gIn">Continue with Google</button>
+<p class="hint" id="gHint"></p>
+</div>
+
+<div id="app" hidden>
+<section>
+<h2>Your subjects</h2>
+<div class="row">
+<input class="grow" id="code" inputmode="numeric" autocomplete="off" placeholder="Paper code, e.g. 315318" aria-label="Paper code"/>
+<button class="btn" id="add">Add subject</button>
+</div>
+<p class="hint" id="addHint"></p>
+<div id="subjects"></div>
+</section>
+
+<section>
+<h2>Your time</h2>
+<div class="card">
+<label class="f" for="exam">First exam date</label>
+<input type="date" id="exam" style="width:100%;max-width:240px"/>
+<label class="f" style="margin-top:16px">Hours you can study each day</label>
+<div class="chips" id="hours" role="group" aria-label="Hours per day"></div>
+<div class="actions"><button class="btn" id="build" disabled>Build timetable</button></div>
+<p class="hint" id="buildHint"></p>
+</div>
+</section>
+
+<section id="planSec" hidden>
+<h2>Your timetable</h2>
+<div class="card">
+<div id="progText" style="font-size:14px"></div>
+<div class="bar"><i id="progBar"></i></div>
+<div class="actions">
+<button class="btn ghost sm" id="resched">Reschedule the rest</button>
+<button class="btn ghost sm" id="reset">Clear timetable</button>
+</div>
+<p class="hint" id="planHint"></p>
+</div>
+<div id="plan"></div>
+</section>
+</div>
+</main>
+
+<script>
+(function(){
+var BOT="https://jarvego-3.onrender.com";
+var AI="https://dark-pond-e4d3.civilapp21.workers.dev";
+var SESS=["S-2026","W-2025","S-2025","W-2024","S-2024"];
+var KEY="peparlance_study_hub_v1";
+var $=function(i){return document.getElementById(i)};
+var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+var nice=function(e){return (e[0]==="S"?"Summer ":"Winter ")+e.slice(2)};
+
+/* ---------- state ---------- */
+var SB_URL="https://yrokyoirxbqpnatmfqdj.supabase.co";
+var SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlyb2t5b2lyeGJxcG5hdG1mcWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NTcyMTksImV4cCI6MjA5ODIzMzIxOX0.U3LcWD4GY7Qiq88z7dJ2yXtTsxL6TqZUSqXbpry0_s0";
+var sb=null,uid=null,timer=null;
+try{sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){}
+var S=blank();
+function blank(){return{subjects:[],exam:"",hours:4,plan:null,tasks:{}}}
+function normalize(r){
+ var d=blank();
+ if(r&&typeof r==="object")for(var k in r)d[k]=r[k];
+ if(!Array.isArray(d.subjects))d.subjects=[];
+ d.subjects.forEach(function(s){if(s.status==="loading"){s.status="error";s.msg="Interrupted. Try again."}s.msg=s.msg||""});
+ return d;
+}
+function save(){
+ try{localStorage.setItem(KEY+"_"+uid,JSON.stringify(S))}catch(e){}
+ clearTimeout(timer);timer=setTimeout(cloudSave,800);
+}
+async function cloudSave(){
+ if(!sb||!uid)return;
+ try{
+  var r=await sb.from("study_hub_state").upsert({user_id:uid,state:S,updated_at:new Date().toISOString()});
+  if(r.error)console.warn("Study Hub save failed:",r.error.message);
+ }catch(e){console.warn(e)}
+}
+
+/* ---------- dates ---------- */
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function parse(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function today(){var n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate())}
+function addDays(d,n){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);return iso(x)}
+function diff(a,b){return Math.round((b-a)/864e5)}
+function pretty(s){return parse(s).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}
+function hrs(n){var h=n/2;return (h%1?h.toFixed(1):h)+" h"}
+
+/* ---------- PDF + AI ---------- */
+async function pdfText(url,maxPages,ms){
+ var ctrl=new AbortController(),t=setTimeout(function(){ctrl.abort()},ms);
+ try{
+  var res=await fetch(url,{signal:ctrl.signal});
+  if(!res.ok)return null;
+  var buf=await res.arrayBuffer();
+  if(buf.byteLength<1000)return null;
+  var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  var out="";
+  for(var i=1;i<=Math.min(pdf.numPages,maxPages);i++){
+   var pg=await pdf.getPage(i),c=await pg.getTextContent();
+   out+=c.items.map(function(x){return x.str}).join(" ")+"\n";
+  }
+  out=out.replace(/\s+/g," ").trim();
+  return out.length>200?out:null;
+ }catch(e){return null}finally{clearTimeout(t)}
+}
+async function callAI(prompt,n){
+ n=n||0;
+ var ctrl=new AbortController(),t=setTimeout(function(){ctrl.abort()},100000);
+ try{
+  var res=await fetch(AI,{method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:.2,responseMimeType:"application/json"}}),signal:ctrl.signal});
+  if(res.status===429&&n<3){await new Promise(function(r){setTimeout(r,1200*Math.pow(2,n))});return callAI(prompt,n+1)}
+  if(!res.ok)throw new Error("AI service error "+res.status);
+  var d=await res.json();
+  var tx=(d&&d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts[0].text)||d.text||d.response||d.output||d.result;
+  if(!tx)throw new Error("Unexpected AI response");
+  return tx.trim().replace(/^```json\s*/i,"").replace(/^```\s*/,"").replace(/```$/,"").trim();
+ }catch(e){
+  if(e.name==="AbortError")throw new Error("AI service timed out");
+  if(n<2&&!/AI service error/.test(e.message)){await new Promise(function(r){setTimeout(r,1500)});return callAI(prompt,n+1)}
+  throw e;
+ }finally{clearTimeout(t)}
+}
+async function aiUnits(code,name,syl,papers){
+ var p="You are helping an MSBTE diploma student plan exam preparation.\nSubject code: "+code+(name?"\nSubject name: "+name:"")+"\n";
+ if(syl)p+="\nSYLLABUS TEXT:\n"+syl.slice(0,12000)+"\n";
+ if(papers)p+="\nPAST QUESTION PAPERS (recent sessions):\n"+papers.slice(0,12000)+"\n";
+ p+="\n"+(syl?"Use the units of the syllabus exactly as listed.":"Infer the main units/chapters of this subject.")+" ";
+ p+=papers?"Give each unit a weight from 1 to 5 based on how many marks and how often its questions appear in the papers.":"Give each unit a weight from 1 to 5 based on typical exam importance.";
+ p+='\nReturn ONLY JSON: {"subject":"<subject name>","units":[{"name":"<unit name>","topics":["<up to 5 topics>"],"weight":<integer 1-5>}]}\nMaximum 10 units.';
+ var j=JSON.parse(await callAI(p));
+ if(!j||!Array.isArray(j.units)||!j.units.length)throw new Error("AI returned no units");
+ return{name:String(j.subject||name||"Subject "+code),units:j.units.slice(0,10).map(function(u,i){
+  var w=Math.round(Number(u.weight));if(!(w>=1))w=3;if(w>5)w=5;
+  return{name:String(u.name||"Unit "+(i+1)),topics:Array.isArray(u.topics)?u.topics.slice(0,5).map(String):[],weight:w}})};
+}
+
+/* ---------- subjects ---------- */
+var queue=Promise.resolve();
+function find(code){return S.subjects.filter(function(s){return s.code===code})[0]}
+function setMsg(s,m,st){s.msg=m;if(st)s.status=st;renderSubjects()}
+async function process(code){
+ var s=find(code);if(!s)return;
+ try{
+  setMsg(s,"Fetching syllabus... the first request can take up to a minute.","loading");
+  var syl=await pdfText(BOT+"/syllabus?code="+encodeURIComponent(code),14,60000);
+  var papers="",found=0;
+  for(var i=0;i<SESS.length&&found<3&&find(code);i++){
+   setMsg(s,"Fetching paper: "+nice(SESS[i])+"...","loading");
+   var t=await pdfText(BOT+"/fetch?code="+encodeURIComponent(code)+"&exam="+encodeURIComponent(SESS[i]),4,60000);
+   if(t){papers+="\n--- "+nice(SESS[i])+" ---\n"+t.slice(0,3800);found++}
+  }
+  if(!find(code))return;
+  if(!syl&&!papers){setMsg(s,"Could not fetch the syllabus or papers for this code. Type the subject name and AI will list its units.","manual");save();return}
+  setMsg(s,"Reading units and topic weightage...","loading");
+  var r=await aiUnits(code,s.name,syl,papers);
+  s.name=r.name;s.units=r.units;
+  s.src=(syl?"syllabus":"")+(syl&&papers?" + ":"")+(papers?found+" paper"+(found>1?"s":""):"");
+  s.status="ready";s.msg="";
+ }catch(e){s.status="error";s.msg=e.message||"Something went wrong."}
+ save();renderSubjects();
+}
+function enqueue(code){queue=queue.then(function(){return process(code)})}
+async function manual(code){
+ var s=find(code),inp=document.getElementById("mn_"+code);
+ var nm=inp&&inp.value.trim();
+ if(!nm){s.msg="Enter the subject name first.";renderSubjects();return}
+ s.name=nm;setMsg(s,"Asking AI for units...","loading");
+ try{var r=await aiUnits(code,nm,"","");s.name=r.name;s.units=r.units;s.src="AI estimate";s.status="ready";s.msg=""}
+ catch(e){s.status="manual";s.msg=e.message}
+ save();renderSubjects();
+}
+function renderSubjects(){
+ var box=$("subjects");
+ if(!S.subjects.length){box.innerHTML='<div class="empty">No subjects yet. Add your first paper code above.</div>';updateBuild();return}
+ box.innerHTML=S.subjects.map(function(s){
+  var tag=s.status==="ready"?'<span class="tag">Ready</span>':s.status==="loading"?'<span class="tag load">Working</span>':'<span class="tag bad">Needs attention</span>';
+  var body="";
+  if(s.status==="ready"){
+   body='<details><summary>'+s.units.length+' units · '+esc(s.src||"")+'</summary><ul class="units">'+s.units.map(function(u){
+    return'<li><span>'+esc(u.name)+(u.topics.length?'<br><small>'+esc(u.topics.join(", "))+'</small>':"")+'</span><span class="w">'+u.weight+'/5</span></li>'}).join("")+'</ul></details>';
+  }else{
+   body='<p class="hint'+(s.status==="error"?" err":"")+'">'+esc(s.msg)+'</p>';
+   if(s.status==="manual")body+='<div class="row"><input class="grow" id="mn_'+esc(s.code)+'" placeholder="Subject name, e.g. Theory of Structures" value="'+esc(s.name)+'"/><button class="btn sm" data-a="manual" data-c="'+esc(s.code)+'">List units</button></div>';
+   if(s.status==="error")body+='<button class="btn ghost sm" data-a="retry" data-c="'+esc(s.code)+'">Try again</button>';
+  }
+  return'<div class="card subj"><div class="subj-head"><div><div class="subj-name">'+esc(s.name||"Subject")+'</div><div class="code">Paper '+esc(s.code)+'</div></div>'+tag+'</div>'+body+
+   '<div class="subj-foot"><label>Exam date (optional) <input type="date" data-a="date" data-c="'+esc(s.code)+'" value="'+esc(s.exam||"")+'"/></label><button class="btn ghost sm" data-a="del" data-c="'+esc(s.code)+'">Remove</button></div></div>';
+ }).join("");
+ updateBuild();
+}
+$("subjects").addEventListener("click",function(e){
+ var b=e.target.closest("button[data-a]");if(!b)return;
+ var c=b.getAttribute("data-c"),a=b.getAttribute("data-a");
+ if(a==="del"){S.subjects=S.subjects.filter(function(s){return s.code!==c});delete S.tasks[c];save();renderSubjects()}
+ if(a==="retry"){var s=find(c);s.status="loading";s.msg="Waiting...";save();renderSubjects();enqueue(c)}
+ if(a==="manual")manual(c);
+});
+$("subjects").addEventListener("change",function(e){
+ var i=e.target;if(i.getAttribute("data-a")!=="date")return;
+ var s=find(i.getAttribute("data-c"));if(s){s.exam=i.value;save()}
+});
+$("add").addEventListener("click",function(){
+ var v=$("code").value.trim(),h=$("addHint");h.className="hint";
+ if(!/^[A-Za-z0-9_-]{3,20}$/.test(v)){h.className="hint err";h.textContent="Enter a valid paper code (letters and digits only).";return}
+ if(find(v)){h.className="hint warn";h.textContent="This code is already in your list.";return}
+ S.subjects.push({code:v,name:"",units:[],exam:"",status:"loading",msg:"Waiting...",src:""});
+ $("code").value="";h.textContent="";save();renderSubjects();enqueue(v);
+});
+$("code").addEventListener("keydown",function(e){if(e.key==="Enter")$("add").click()});
+
+/* ---------- time inputs ---------- */
+function renderHours(){
+ $("hours").innerHTML=[1,2,3,4,5,6,7,8].map(function(h){return'<button class="chip" data-h="'+h+'" aria-pressed="'+(S.hours===h)+'">'+h+' h</button>'}).join("");
+}
+$("hours").addEventListener("click",function(e){
+ var b=e.target.closest("[data-h]");if(!b)return;S.hours=+b.getAttribute("data-h");save();renderHours();
+});
+$("exam").addEventListener("change",function(){S.exam=$("exam").value;save();updateBuild()});
+function updateBuild(){
+ var ready=S.subjects.some(function(s){return s.status==="ready"});
+ $("build").disabled=!(ready&&S.exam);
+}
+
+/* ---------- planning ---------- */
+function subjectInfo(){
+ var start=today();
+ return S.subjects.filter(function(s){return s.status==="ready"&&s.units.length}).map(function(s){
+  return{s:s,ed:diff(start,parse(s.exam||S.exam))};
+ }).filter(function(x){return x.ed>0});
+}
+function dist(units,study){
+ var n=units.length,keep=units.map(function(u,i){return i});
+ if(study<n)keep=keep.sort(function(a,b){return units[b].weight-units[a].weight}).slice(0,Math.max(study,1)).sort(function(a,b){return a-b});
+ var W=keep.reduce(function(a,i){return a+units[i].weight},0),out=units.map(function(){return 0});
+ keep.forEach(function(i){out[i]=Math.max(1,Math.floor(study*units[i].weight/W))});
+ var left=study-out.reduce(function(a,b){return a+b},0);
+ var order=keep.slice().sort(function(a,b){return units[b].weight-units[a].weight}),k=0;
+ while(left!==0&&k<600){var i=order[k%order.length];if(left>0){out[i]++;left--}else if(out[i]>1){out[i]--;left++}k++}
+ return out;
+}
+function makeTasks(info,H2){
+ var maxD=Math.max.apply(null,info.map(function(x){return x.ed}));
+ var total=H2*maxD*0.92;
+ var W=info.reduce(function(a,x){return a+x.s.units.reduce(function(b,u){return b+u.weight},0)},0);
+ var trimmed=[];S.tasks={};
+ info.forEach(function(x){
+  var w=x.s.units.reduce(function(b,u){return b+u.weight},0);
+  var alloc=Math.max(2,Math.min(x.ed*H2,Math.round(total*w/W)));
+  var rev=alloc>=6?Math.max(2,Math.round(alloc*.15)):0;
+  var study=Math.max(1,alloc-rev);
+  var d=dist(x.s.units,study),t=[];
+  if(d.filter(function(v){return v>0}).length<x.s.units.length)trimmed.push(x.s.name||x.s.code);
+  x.s.units.forEach(function(u,i){if(d[i]>0)t.push({label:u.name,slots:d[i],rev:false})});
+  if(rev)t.push({label:"Revision: repeated questions and top topics",slots:rev,rev:true});
+  S.tasks[x.s.code]=t;
+ });
+ return trimmed;
+}
+function schedule(rem,info,H2,doneToday){
+ var days=[],maxD=Math.max.apply(null,info.map(function(x){return x.ed})),start=today();
+ for(var d=0;d<maxD;d++){
+  var cap=d===0?Math.max(0,H2-doneToday):H2,used={},items=[],idx={};
+  for(var k=0;k<cap;k++){
+   var best=null,bs=-1;
+   for(var q=0;q<info.length;q++){
+    var x=info[q],c=x.s.code;if(x.ed<=d)continue;
+    var r=rem[c].reduce(function(a,b){return a+b},0);if(!r)continue;
+    var sc=r/(x.ed-d)/(1+.6*(used[c]||0));
+    if(sc>bs){bs=sc;best=x}
+   }
+   if(!best)break;
+   var cc=best.s.code,t=rem[cc].findIndex(function(v){return v>0});
+   rem[cc][t]--;used[cc]=(used[cc]||0)+1;
+   var key=cc+"|"+t;
+   if(idx[key]==null){idx[key]=items.length;items.push({c:cc,t:t,n:0,done:false})}
+   items[idx[key]].n++;
+  }
+  days.push({date:addDays(start,d),items:items});
+ }
+ return days;
+}
+function remainingLeft(rem){var n=0;for(var c in rem)n+=rem[c].reduce(function(a,b){return a+b},0);return n}
+function build(){
+ var h=$("buildHint");h.className="hint";
+ var info=subjectInfo();
+ if(!info.length){h.className="hint err";h.textContent="Pick an exam date after today. Subjects need an exam date in the future.";return}
+ var H2=S.hours*2,trimmed=makeTasks(info,H2),rem={};
+ info.forEach(function(x){rem[x.s.code]=S.tasks[x.s.code].map(function(t){return t.slots})});
+ var days=schedule(rem,info,H2,0);
+ S.plan={start:iso(today()),days:days,notes:[]};
+ if(trimmed.length)S.plan.notes.push("Time is tight, so "+trimmed.join(", ")+(trimmed.length>1?" include":" includes")+" only the highest-weight units.");
+ var left=remainingLeft(rem);
+ if(left)S.plan.notes.push(Math.ceil(left/2)+" hours of topics did not fit before the exam dates. Add more hours per day or move the exam dates.");
+ save();renderPlan();
+ $("planSec").scrollIntoView({behavior:"smooth"});
+}
+function doneSlots(){
+ var d={};
+ S.plan.days.forEach(function(day){day.items.forEach(function(it){if(it.done){var k=it.c+"|"+it.t;d[k]=(d[k]||0)+it.n}})});
+ return d;
+}
+function reschedule(){
+ var h=$("planHint");h.className="hint";
+ var info=subjectInfo();
+ if(!info.length){h.className="hint err";h.textContent="No subject has an exam date in the future.";return}
+ var done=doneSlots(),rem={},H2=S.hours*2,ti=iso(today());
+ info.forEach(function(x){
+  var t=S.tasks[x.s.code];
+  if(!t){h.className="hint err";h.textContent="Build the timetable again to include new subjects.";rem=null;return}
+  if(rem)rem[x.s.code]=t.map(function(tk,i){return Math.max(0,tk.slots-(done[x.s.code+"|"+i]||0))});
+ });
+ if(!rem)return;
+ var past=S.plan.days.filter(function(d){return d.date<ti});
+ var todayDone=[],doneN=0;
+ S.plan.days.forEach(function(d){if(d.date===ti)d.items.forEach(function(it){if(it.done){todayDone.push(it);doneN+=it.n}})});
+ var days=schedule(rem,info,H2,doneN);
+ if(days.length){days[0].items=todayDone.concat(days[0].items)}
+ else if(todayDone.length)days=[{date:ti,items:todayDone}];
+ S.plan.days=past.concat(days);
+ S.plan.notes=[];
+ var left=remainingLeft(rem);
+ if(left)S.plan.notes.push(Math.ceil(left/2)+" hours of topics still do not fit before the exam dates.");
+ h.className="hint ok";h.textContent="Remaining topics spread over the days that are left.";
+ save();renderPlan();
+}
+function renderPlan(){
+ var P=S.plan;
+ $("planSec").hidden=!P;
+ if(!P)return;
+ var total=0,done=0,ti=iso(today());
+ for(var c in S.tasks)S.tasks[c].forEach(function(t){total+=t.slots});
+ P.days.forEach(function(d){d.items.forEach(function(it){if(it.done)done+=it.n})});
+ var pct=total?Math.min(100,Math.round(done*100/total)):0;
+ $("progText").textContent=hrs(done)+" done of "+hrs(total)+" planned ("+pct+"%)";
+ $("progBar").style.width=pct+"%";
+ var notes=(P.notes||[]).map(function(n){return'<p class="hint warn">'+esc(n)+'</p>'}).join("");
+ var html=notes;
+ P.days.forEach(function(d,di){
+  if(!d.items.length&&d.date!==ti)return;
+  var cls=d.date===ti?" today":d.date<ti?" past":"";
+  var slots=d.items.reduce(function(a,it){return a+it.n},0);
+  html+='<div class="card day'+cls+'"><div class="day-head"><div>'+esc(pretty(d.date))+(d.date===ti?" · Today":"")+'</div><span>'+hrs(slots)+'</span></div>';
+  if(!d.items.length)html+='<div class="hint">Nothing planned.</div>';
+  d.items.forEach(function(it,ii){
+   var sj=find(it.c),tk=(S.tasks[it.c]||[])[it.t]||{label:"Study",rev:false};
+   var late=d.date<ti&&!it.done?' <span class="missed">missed</span>':"";
+   html+='<div class="item'+(it.done?" done":"")+'"><input type="checkbox" data-d="'+di+'" data-i="'+ii+'"'+(it.done?" checked":"")+' aria-label="Mark done"/><div class="t">'+
+    '<div>'+esc(sj?sj.name:it.c)+late+'</div><small'+(tk.rev?' class="rev"':"")+'>'+esc(tk.label)+' · '+hrs(it.n)+'</small></div></div>';
+  });
+  html+='</div>';
+ });
+ $("plan").innerHTML=html;
+}
+$("plan").addEventListener("change",function(e){
+ var i=e.target;if(i.type!=="checkbox")return;
+ var it=S.plan.days[+i.getAttribute("data-d")].items[+i.getAttribute("data-i")];
+ it.done=i.checked;save();
+ var y=window.scrollY;renderPlan();window.scrollTo(0,y);
+});
+$("build").addEventListener("click",build);
+$("resched").addEventListener("click",reschedule);
+$("reset").addEventListener("click",function(){
+ if(!confirm("Clear the timetable and your progress? Your subjects stay."))return;
+ S.plan=null;S.tasks={};save();renderPlan();
+});
+
+/* ---------- auth + init ---------- */
+async function start(user){
+ uid=user.id;
+ var st=null;
+ try{
+  var r=await sb.from("study_hub_state").select("state").eq("user_id",uid).maybeSingle();
+  if(r.data&&r.data.state)st=r.data.state;
+ }catch(e){}
+ if(!st){try{st=JSON.parse(localStorage.getItem(KEY+"_"+uid)||localStorage.getItem(KEY)||"null")}catch(e){}}
+ S=normalize(st);
+ $("gate").hidden=true;$("app").hidden=false;$("out").hidden=false;
+ $("exam").min=addDays(today(),1);
+ $("exam").value=S.exam||"";
+ renderHours();renderSubjects();renderPlan();
+}
+$("gIn").addEventListener("click",async function(){
+ var h=$("gHint");h.className="hint";h.textContent="";
+ if(!sb){h.className="hint err";h.textContent="Sign-in service could not load. Refresh the page.";return}
+ var r=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.href}});
+ if(r.error){h.className="hint err";h.textContent=r.error.message}
+});
+$("out").addEventListener("click",async function(){
+ try{await sb.auth.signOut()}catch(e){}
+ window.location.reload();
+});
+(async function(){
+ if(!sb){$("gate").hidden=false;return}
+ var r=await sb.auth.getSession();
+ var ses=r&&r.data&&r.data.session;
+ if(ses)start(ses.user);else $("gate").hidden=false;
+ sb.auth.onAuthStateChange(function(ev,session){
+  if(ev==="SIGNED_IN"&&session&&session.user.id!==uid)start(session.user);
+  if(ev==="SIGNED_OUT"&&uid)window.location.reload();
+ });
+})();
+})();
+</script>
+</body>
+</html>
