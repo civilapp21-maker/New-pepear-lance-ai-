@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "online.peparlanceai.twa",
+        "sha256_cert_fingerprints": ["81:3B:EB:0B:5D:9D:96:EA:7E:39:AB:30:AC:C0:C9:5E:43:D2:36:F6:FB:AD:A2:ED:C3:08:75:82:85:64:45:21"]
+      }
+    }]

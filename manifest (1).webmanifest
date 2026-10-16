@@ -1,0 +1,52 @@
+{
+  "name": "Peparlance AI – MSBTE Question Paper Analyser",
+  "short_name": "Peparlance",
+  "description": "Download MSBTE previous year question papers by paper code, analyse repeated questions with AI, take MCQ mock tests and get guess papers.",
+  "id": "/app",
+  "start_url": "/app?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F1117",
+  "theme_color": "#0F1117",
+  "lang": "en-IN",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mock Test",
+      "short_name": "Mock Test",
+      "description": "Create an MCQ mock test",
+      "url": "/app?source=pwa#mock",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
